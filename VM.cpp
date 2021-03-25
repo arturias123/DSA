@@ -5,17 +5,20 @@ regex oneOp("(\\w+)\\s(\\w+)$");
 regex noOp("(\\w+)$");
 regex arith("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
 regex arithReg("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
-regex cmp("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
+regex cmp("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
+regex cmpReg("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
 regex log1("(And|Or)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
-regex nein("Not\\sR([1-9]|1[0-5])$");
+regex logReg("(And|Or)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
+regex nein("(Not)\\sR([1-9]|1[0-5])$");
 regex ls("(Move|Load|Store)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
 regex seq1("Return|Halt$");
 regex seq2("(Jump|Call)\\s(\\S+)$");
-regex seq3("JumpIf\sR([1-9]|1[0-5]),\\s(\\S+)$");
+regex seq3("JumpIf\\sR([1-9]|1[0-5]),\\s(\\S+)$");
 regex boolean("true|false");
-regex address("(\\d+[A]$");
+regex address("(\\d+)[A]$");
 regex integer("\\d+");
 regex flOat("\\d+[.]\\d+");
+regex reg("R([1-9]|1[0-5])$");
 
 
 void VM::run(string filename)
@@ -40,30 +43,36 @@ void VM::run(string filename)
 			else if (regex_match(ins[i], cmp)) {
 				compare(ins[i]);
 			}
+			else if (regex_match(ins[i], cmpReg)) {
+				compare(ins[i]);
+			}
 			else if (regex_match(ins[i], log1)) {
-
+				logic(ins[i]);
+			}
+			else if (regex_match(ins[i], logReg)) {
+				logic(ins[i]);
 			}
 			else if (regex_match(ins[i], ls)) {
-
+				loadStore(ins[i]);
 			}
 			else if (regex_match(ins[i], seq3)) {
-
+				sequence(ins[i]);
 			}
 			else throw InvalidOperand(i);
 
 		}
 		else if (regex_match(ins[i], oneOp)) {
 			if (regex_match(ins[i], nein)) {
-
+				logic(ins[i]);
 			}
 			else if (regex_match(ins[i], seq2)) {
-
+				sequence(ins[i]);
 			}
 			else throw InvalidOperand(i);
 		}
 		else if (regex_match(ins[i], noOp)) {
 			if (regex_match(ins[i], seq1)) {
-
+				sequence(ins[i]);
 			}
 			else throw InvalidOperand(i);
 		}
@@ -78,7 +87,6 @@ void VM::run(string filename)
 void VM::calculate(string input) {
 	smatch s;
 	string a, b;
-	int dest, src;
 	bool ints = 0;
 	if (regex_match(input, s, arith)) {
 		a = R[stoi(s[2])];	// register ID
@@ -100,7 +108,7 @@ void VM::calculate(string input) {
 			R[stoi(s[2])] = to_string(stoi(a) + stoi(b));
 		}
 		else {
-			R[stoi(s[2])] = to_string(stod(a) + stod(b)); // assign result to register
+			R[stoi(s[2])] = to_string(stof(a) + stof(b)); // assign result to register
 		}
 	}
 	else if (s[1] == "Minus") {
@@ -108,7 +116,7 @@ void VM::calculate(string input) {
 			R[stoi(s[2])] = to_string(stoi(a) - stoi(b));
 		}
 		else {
-			R[stoi(s[2])] = to_string(stod(a) - stod(b)); 
+			R[stoi(s[2])] = to_string(stof(a) - stof(b)); 
 		}
 	}
 	else if (s[1] == "Div") {
@@ -116,12 +124,7 @@ void VM::calculate(string input) {
 			throw DivideByZero(i);
 		}
 		else {
-			if (ints == 1) {
-				R[stoi(s[2])] = to_string(stoi(a) / stoi(b));
-			}
-			else {
-				R[stoi(s[2])] = to_string(stod(a) / stod(b));
-			}
+			R[stoi(s[2])] = to_string(stod(a) / stod(b));
 		}
 	}
 	else if (s[1] == "Mul") {
@@ -132,6 +135,10 @@ void VM::calculate(string input) {
 			R[stoi(s[2])] = to_string(stod(a) * stod(b));
 		}
 	}
+	if (regex_match(R[stoi(s[2])], flOat)) {
+		removeTrailingZeros(R[stoi(s[2])]);
+	}
+	cout << R[stoi(s[2])] << endl;
 }
 
 void VM::compare(string input) {
@@ -141,6 +148,10 @@ void VM::compare(string input) {
 	if (regex_match(input, s, cmp)) {
 		a = R[stoi(s[2])]; // dest
 		b = s[3];		   // src
+	}
+	else if (regex_match(input, s, cmpReg)) {
+		a = R[stoi(s[2])];
+		b = R[stoi(s[3])];
 	}
 	if (regex_match(a, address) || regex_match(b, address)) {
 		throw TypeMismatch(i);
@@ -175,6 +186,142 @@ void VM::compare(string input) {
 	else {
 		R[stoi(s[2])] = "false";
 	}
+	cout << R[stoi(s[2])] << endl;
+}
+
+void VM::logic(string input) {
+	smatch s;
+	bool dest, src;
+	string dest2, src2, res;
+	if (regex_match(input, s, log1)) {
+		dest2 = R[stoi(s[2])];
+		src2 = s[3];
+		if (regex_match(dest2, boolean) && regex_match(src2, boolean)) {
+			dest = stob(dest2);
+			src = stob(src2);
+		}
+		else throw TypeMismatch(i);
+		if (s[1] == "And") {
+			dest = (dest && src);
+		}
+		else {
+			dest = (dest || src);
+		}
+		if (dest == 0) {
+			res = "false";
+		}
+		else {
+			res = "true";
+		}
+		R[stoi(s[2])] = res;
+	}
+	else if (regex_match(input, s, logReg)) {
+		dest2 = R[stoi(s[2])];
+		src2 = R[stoi(s[3])];
+		if (regex_match(dest2, boolean) && regex_match(src2, boolean)) {
+			dest = stob(dest2);
+			src = stob(src2);
+		}
+		else throw TypeMismatch(i);
+		if (s[1] == "And") {
+			dest = (dest && src);
+		}
+		else {
+			dest = (dest || src);
+		}
+		if (dest == 0) {
+			R[stoi(s[2])] = "false";
+		}
+		else {
+			R[stoi(s[2])] = "true";
+		}
+	}
+	else if (regex_match(input, s, nein)) {
+		dest2 = R[stoi(s[2])];
+		if (regex_match(dest2, boolean)) {
+			dest = stob(dest2);
+		}
+		else throw TypeMismatch(i);
+		dest = !dest;
+		if (dest == 0) {
+			res = "false";
+		}
+		else {
+			res = "true";
+		}
+		R[stoi(s[2])] = res;
+	}
+}
+
+void VM::removeTrailingZeros(string &input) {
+	int i = input.length() - 1;
+	while (input[i] == '0') {
+		input.erase(i, 1);
+		i--;
+	}
+	if (input[i] == '.') {
+		input.append(i, '0');
+	}
+}
+
+bool VM::stob(string input) {
+	if (input == "true") {
+		return true;
+	}
+	else return false;
+}
+
+void VM::loadStore(string input) {
+	smatch s, m, add;
+	string dest, s3, src;
+	if (regex_match(input, s, ls)) {
+		dest = R[stoi(s[2])];
+		s3 = s[3];
+		if (s[1] == "Move") {
+			if (regex_match(s3, m, reg)) {
+				src = R[stoi(m[1])];
+				R[stoi(s[2])] = src;
+			}
+			else {
+				R[stoi(s[2])] = s3;
+			}
+		}
+		else if (s[1] == "Load") {
+			if (regex_match(s3, m, reg)) {
+				src = R[stoi(m[1])];
+				if (regex_match(src, add, address)) {
+					dest = staticMem[stoi(add[1])];
+				}
+				else throw TypeMismatch(i);
+			}
+			else {
+				if (regex_match(s3, add, address)) {
+					dest = staticMem[stoi(add[1])];
+				}
+				else throw TypeMismatch(i);
+			}
+			R[stoi(s[2])] = dest;
+		}
+		else if (s[1] == "Store") {
+			if (regex_match(dest, add, address)) {
+				if (regex_match(s3, m, reg)) {
+					src = R[stoi(m[1])];
+				}
+				else {
+					src = s3;
+				}
+				staticMem[stoi(add[1])] = src;
+			}
+			else throw TypeMismatch(i);
+		}
+		cout << staticMem[stoi(add[1])] << endl;
+	}
+	cout << R[stoi(s[2])] << endl;
+	
+}
+
+void VM::sequence(string input) {
+
 }
 
 //stod(s[3])
