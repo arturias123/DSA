@@ -93,7 +93,7 @@ void VM::calculate(string input) {
 		b = s[3];			// value
 	}
 	else if (regex_match(input, s, arithReg)) {
-		a = R[stoi(s[2])];	
+		a = R[stoi(s[2])];
 		b = R[stoi(s[3])];	// register ID
 	}
 	if (regex_match(a, integer) && regex_match(b, integer)) {
@@ -116,7 +116,7 @@ void VM::calculate(string input) {
 			R[stoi(s[2])] = to_string(stoi(a) - stoi(b));
 		}
 		else {
-			R[stoi(s[2])] = to_string(stof(a) - stof(b)); 
+			R[stoi(s[2])] = to_string(stof(a) - stof(b));
 		}
 	}
 	else if (s[1] == "Div") {
@@ -253,7 +253,7 @@ void VM::logic(string input) {
 	}
 }
 
-void VM::removeTrailingZeros(string &input) {
+void VM::removeTrailingZeros(string& input) {
 	int i = input.length() - 1;
 	while (input[i] == '0') {
 		input.erase(i, 1);
@@ -317,12 +317,33 @@ void VM::loadStore(string input) {
 		cout << staticMem[stoi(add[1])] << endl;
 	}
 	cout << R[stoi(s[2])] << endl;
-	
+
 }
 
 void VM::sequence(string input) {
+	smatch s, add;
+	string dest, src;
+	if (regex_match(input, s, seq1)) {
 
+	}
+	else if (regex_match(input, s, seq2)) {
+		if (s[1] == "Jump") {
+			src = s[2];
+			if (regex_match(src, add, address)) {
+				R[0] = staticMem[stoi(add[1])];
+			}
+			else throw TypeMismatch(i);
+		}
+		else if (s[1] == "Call") {
+			src = s[2];
+			if (regex_match(src, add, address)) {
+				// push value of IP onto stack
+				R[0] = staticMem[stoi(add[1])];
+			}
+			else throw TypeMismatch(i);
+		}
+	}
+	else if (regex_match(input, s, seq3)) {
+		
+	}
 }
-
-//stod(s[3])
-//stod(R[stoi(s[3]])
