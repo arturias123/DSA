@@ -1,8 +1,8 @@
 #include "VM.h"
 // regex for instruction
-regex twoOps("(\\w+)\\s(\\w+),\\s(\\S+)$");
-regex oneOp("(\\w+)\\s(\\w+)$");
-regex noOp("(\\w+)$");
+regex twoOps("^(\\w+)\\s(\\w+),\\s(\\S+)$");
+regex oneOp("^(\\w+)\\s(\\w+)$");
+regex noOp("^(\\w+)$");
 regex arith("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
 regex arithReg("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
 regex cmp("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
@@ -11,7 +11,7 @@ regex log1("(And|Or)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
 regex logReg("(And|Or)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
 regex nein("(Not)\\sR([1-9]|1[0-5])$");
 regex ls("(Move|Load|Store)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
-regex seq1("Return|Halt$");
+regex seq1("(Return|Halt)$");
 regex seq2("(Jump|Call)\\s(\\S+)$");
 regex seq3("JumpIf\\sR([1-9]|1[0-5]),\\s(\\S+)$");
 regex boolean("true|false");
@@ -33,6 +33,9 @@ void VM::run(string filename)
 	while (getline(myReadFile, myText)) {
 		// Output the text from the file
 		ins[i] = myText;
+		insCount++;
+	}
+	while (i < insCount) {
 		if (regex_match(ins[i], twoOps)) {
 			if (regex_match(ins[i], arith)) {
 				calculate(ins[i]);
@@ -59,7 +62,6 @@ void VM::run(string filename)
 				sequence(ins[i]);
 			}
 			else throw InvalidOperand(i);
-
 		}
 		else if (regex_match(ins[i], oneOp)) {
 			if (regex_match(ins[i], nein)) {
@@ -79,7 +81,6 @@ void VM::run(string filename)
 		else throw InvalidInstruction(i);
 		i++;
 	}
-
 	// Close the file
 	myReadFile.close();
 }
@@ -285,6 +286,7 @@ void VM::loadStore(string input) {
 			else {
 				R[stoi(s[2])] = s3;
 			}
+			cout << R[stoi(s[2])] << endl;
 		}
 		else if (s[1] == "Load") {
 			if (regex_match(s3, m, reg)) {
@@ -301,6 +303,7 @@ void VM::loadStore(string input) {
 				else throw TypeMismatch(i);
 			}
 			R[stoi(s[2])] = dest;
+			cout << R[stoi(s[2])] << endl;
 		}
 		else if (s[1] == "Store") {
 			if (regex_match(dest, add, address)) {
@@ -313,18 +316,26 @@ void VM::loadStore(string input) {
 				staticMem[stoi(add[1])] = src;
 			}
 			else throw TypeMismatch(i);
+			cout << staticMem[stoi(add[1])] << endl;
 		}
-		cout << staticMem[stoi(add[1])] << endl;
 	}
-	cout << R[stoi(s[2])] << endl;
-
 }
 
 void VM::sequence(string input) {
 	smatch s, add;
 	string dest, src;
 	if (regex_match(input, s, seq1)) {
-
+		string control = s[1];
+		if (control == "Return") {
+			if (sCount > 0 && sCount < MAX_STACK_COUNT) {
+				R[0] = stack[--sCount];
+				stack[sCount] == "";
+			}
+			else throw StackFull(i);
+		}
+		else if (control == "Halt") {
+			i = insCount;
+		}
 	}
 	else if (regex_match(input, s, seq2)) {
 		if (s[1] == "Jump") {
@@ -338,12 +349,18 @@ void VM::sequence(string input) {
 			src = s[2];
 			if (regex_match(src, add, address)) {
 				// push value of IP onto stack
+				stack[sCount++] = R[0];
 				R[0] = staticMem[stoi(add[1])];
 			}
 			else throw TypeMismatch(i);
 		}
 	}
 	else if (regex_match(input, s, seq3)) {
-		
+		dest = R[stoi(s[1])];
+		src = s[2];
+		if (regex_match(dest, boolean) && regex_match(src, add, address)) {
+			R[0] = staticMem[stoi(add[1])];
+		}
+		else throw TypeMismatch(i);
 	}
 }

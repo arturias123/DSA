@@ -1,8 +1,7 @@
 #ifndef VM_H
 #define VM_H
-//#define _REGEX_MAX_STACK_COUNT 1000
+#define MAX_STACK_COUNT 1000
 #include "main.h"
-
 
 class VM
 {
@@ -13,6 +12,9 @@ public:
   string ins[65536];
   string staticMem[65536];
   string R[16];
+  string stack[1000];
+  int insCount = 0;
+  int sCount = 0;
   int i = 0;
   void run(string filename);
   void calculate(string input);
@@ -23,4 +25,5 @@ public:
   bool stob(string input);
   void sequence(string input);
 };
+
 #endif
