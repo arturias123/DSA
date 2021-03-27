@@ -1,8 +1,8 @@
 #include "VM.h"
 // regex for instruction
-regex twoOps("^(\\w+)\\s(\\w+),\\s(\\S+)$");
-regex oneOp("^(\\w+)\\s(\\w+)$");
-regex noOp("^(\\w+)$");
+regex twoOps("^([A-Z]\\w+)\\s(\\w+),\\s(\\S+)$");
+regex oneOp("^([A-Z]\\w+)\\s(\\w+)$");
+regex noOp("^([A-Z]\\w+)$");
 regex arith("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
 regex arithReg("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
 regex cmp("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
@@ -33,7 +33,7 @@ void VM::run(string filename)
 	// Use a while loop together with the getline() function to read the file line by line
 	while (getline(myReadFile, myText)) {
 		// Output the text from the file
-		ins[i] = myText;
+		ins[insCount] = myText;
 		insCount++;
 	}
 	while (i < insCount) {
@@ -143,7 +143,6 @@ void VM::calculate(string input) {
 	if (regex_match(R[stoi(s[2])], flOat)) {
 		removeTrailingZeros(R[stoi(s[2])]);
 	}
-	cout << R[stoi(s[2])] << endl;
 }
 
 void VM::compare(string input) {
@@ -191,7 +190,6 @@ void VM::compare(string input) {
 	else {
 		R[stoi(s[2])] = "false";
 	}
-	cout << R[stoi(s[2])] << endl;
 }
 
 void VM::logic(string input) {
@@ -290,7 +288,6 @@ void VM::loadStore(string input) {
 			else {
 				R[stoi(s[2])] = s3;
 			}
-			cout << R[stoi(s[2])] << endl;
 		}
 		else if (s[1] == "Load") {
 			if (regex_match(s3, m, reg)) {
@@ -307,7 +304,6 @@ void VM::loadStore(string input) {
 				else throw TypeMismatch(i);
 			}
 			R[stoi(s[2])] = dest;
-			cout << R[stoi(s[2])] << endl;
 		}
 		else if (s[1] == "Store") {
 			if (regex_match(dest, add, address)) {
@@ -320,7 +316,6 @@ void VM::loadStore(string input) {
 				staticMem[stoi(add[1])] = src;
 			}
 			else throw TypeMismatch(i);
-			cout << staticMem[stoi(add[1])] << endl;
 		}
 	}
 }
@@ -370,5 +365,21 @@ void VM::sequence(string input) {
 }
 
 void VM::inOut(string input) {
-
+	smatch s, m;
+	string dest, src;
+	if (regex_match(input, s, io)) {
+		if (s[1] == "Output") {
+			string val = s[2];
+			if (regex_match(val, m, reg)) {
+				dest = R[stoi(m[1])];
+			}
+			else {
+				dest = val;
+			}
+			cout << dest;
+		}
+		else if (s[1] == "Input") {
+			src = s[2];
+		}
+	}
 }
