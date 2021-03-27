@@ -24,6 +24,7 @@ public:
   void loadStore(string input);
   bool stob(string input);
   void sequence(string input);
+  void inOut(string input);
 };
 
 #endif

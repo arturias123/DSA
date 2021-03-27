@@ -19,6 +19,7 @@ regex address("(\\d+)[A]$");
 regex integer("\\d+");
 regex flOat("\\d+[.]\\d+");
 regex reg("R([1-9]|1[0-5])$");
+regex io("^(Input|Output)\\s(\\S+)$");
 
 
 void VM::run(string filename)
@@ -69,6 +70,9 @@ void VM::run(string filename)
 			}
 			else if (regex_match(ins[i], seq2)) {
 				sequence(ins[i]);
+			}
+			else if (regex_match(ins[i], io)) {
+				inOut(ins[i]);
 			}
 			else throw InvalidOperand(i);
 		}
@@ -363,4 +367,8 @@ void VM::sequence(string input) {
 		}
 		else throw TypeMismatch(i);
 	}
+}
+
+void VM::inOut(string input) {
+
 }
