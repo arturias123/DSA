@@ -3,22 +3,22 @@
 regex twoOps("^([A-Z]\\w+)\\s(\\w+),\\s(\\S+)$");
 regex oneOp("^([A-Z]\\w+)\\s(\\w+)$");
 regex noOp("^([A-Z]\\w+)$");
-regex arith("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
-regex arithReg("(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
-regex cmp("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
-regex cmpReg("Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
-regex log1("(And|Or)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
-regex logReg("(And|Or)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
-regex nein("(Not)\\sR([1-9]|1[0-5])$");
-regex ls("(Move|Load|Store)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
-regex seq1("(Return|Halt)$");
-regex seq2("(Jump|Call)\\s(\\S+)$");
-regex seq3("JumpIf\\sR([1-9]|1[0-5]),\\s(\\S+)$");
-regex boolean("true|false");
-regex address("(\\d+)[A]$");
-regex integer("\\d+");
-regex flOat("\\d+[.]\\d+");
-regex reg("R([1-9]|1[0-5])$");
+regex arith("^(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
+regex arithReg("^(Add|Minus|Div|Mul)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
+regex cmp("^Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\s(\\d+|\\d+[.]\\d+)$");
+regex cmpReg("^Cmp(EQ|NE|LT|LE|GT|GE)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
+regex log1("^(And|Or)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
+regex logReg("^(And|Or)\\sR([1-9]|1[0-5]),\\sR([1-9]|1[0-5])$");
+regex nein("^(Not)\\sR([1-9]|1[0-5])$");
+regex ls("^(Move|Load|Store)\\sR([1-9]|1[0-5]),\\s(\\S+)$");
+regex seq1("^(Return|Halt)$");
+regex seq2("^(Jump|Call)\\s(\\S+)$");
+regex seq3("^JumpIf\\sR([1-9]|1[0-5]),\\s(\\S+)$");
+regex boolean("^true|false$");
+regex address("^(\\d+)[A]$");
+regex integer("^\\d+$");
+regex flOat("^\\d+[.]\\d+$");
+regex reg("^R([1-9]|1[0-5])$");
 regex io("^(Input|Output)\\s(\\S+)$");
 
 
@@ -326,11 +326,10 @@ void VM::sequence(string input) {
 	if (regex_match(input, s, seq1)) {
 		string control = s[1];
 		if (control == "Return") {
-			if (sCount > 0 && sCount < MAX_STACK_COUNT) {
+			if (sCount > 0) {
 				R[0] = stack[--sCount];
 				stack[sCount] == "";
 			}
-			else throw StackFull(i);
 		}
 		else if (control == "Halt") {
 			i = insCount;
@@ -340,7 +339,10 @@ void VM::sequence(string input) {
 		if (s[1] == "Jump") {
 			src = s[2];
 			if (regex_match(src, add, address)) {
-				R[0] = staticMem[stoi(add[1])];
+				if (stoi(add[1]) <= insCount) {
+					i = stoi(add[1]) - 1;
+				}
+				else throw InvalidDestination(i);
 			}
 			else throw TypeMismatch(i);
 		}
@@ -348,8 +350,14 @@ void VM::sequence(string input) {
 			src = s[2];
 			if (regex_match(src, add, address)) {
 				// push value of IP onto stack
-				stack[sCount++] = R[0];
-				R[0] = staticMem[stoi(add[1])];
+				if (sCount < MAX_STACK_COUNT) {
+					stack[sCount++] = i; 
+					if (stoi(add[1]) <= insCount) {
+						i = stoi(add[1]) - 1;
+					}
+					else throw InvalidDestination(i);
+				}
+				else throw StackFull(i);
 			}
 			else throw TypeMismatch(i);
 		}
@@ -358,7 +366,12 @@ void VM::sequence(string input) {
 		dest = R[stoi(s[1])];
 		src = s[2];
 		if (regex_match(dest, boolean) && regex_match(src, add, address)) {
-			R[0] = staticMem[stoi(add[1])];
+			if (dest == "true") {
+				if (stoi(add[1]) <= insCount) {
+					i = stoi(add[1]) - 1;
+				}
+				else throw InvalidDestination(i);
+			}
 		}
 		else throw TypeMismatch(i);
 	}
@@ -371,15 +384,24 @@ void VM::inOut(string input) {
 		if (s[1] == "Output") {
 			string val = s[2];
 			if (regex_match(val, m, reg)) {
-				dest = R[stoi(m[1])];
+				src = R[stoi(m[1])];
 			}
 			else {
-				dest = val;
+				src = val;
 			}
-			cout << dest;
+			cout << src;
 		}
 		else if (s[1] == "Input") {
-			src = s[2];
+			string r = s[2];
+			if (regex_match(r, m, reg)) {
+				string tmp;
+				cin >> tmp;
+				if (regex_match(tmp, boolean) || regex_match(tmp, integer) || regex_match(tmp, flOat)) {
+					src = tmp;
+				}
+				else throw TypeMismatch(i);
+				R[stoi(m[1])] = src;
+			}
 		}
 	}
 }
