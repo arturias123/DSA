@@ -19,7 +19,8 @@ regex address("^(\\d+)[A]$");
 regex integer("^\\d+$");
 regex flOat("^\\d+[.]\\d+$");
 regex reg("^R([1-9]|1[0-5])$");
-regex io("^(Input|Output)\\s(\\S+)$");
+regex outp("^(Output)\\s(\\S+)$");
+regex inp("^(Input)\\sR([1-9]|1[0-5])$");
 
 
 void VM::run(string filename)
@@ -71,7 +72,10 @@ void VM::run(string filename)
 			else if (regex_match(ins[i], seq2)) {
 				sequence(ins[i]);
 			}
-			else if (regex_match(ins[i], io)) {
+			else if (regex_match(ins[i], inp)) {
+				inOut(ins[i]);
+			}
+			else if (regex_match(ins[i], outp)) {
 				inOut(ins[i]);
 			}
 			else throw InvalidOperand(i);
@@ -380,28 +384,26 @@ void VM::sequence(string input) {
 void VM::inOut(string input) {
 	smatch s, m;
 	string dest, src;
-	if (regex_match(input, s, io)) {
-		if (s[1] == "Output") {
-			string val = s[2];
-			if (regex_match(val, m, reg)) {
-				src = R[stoi(m[1])];
-			}
-			else {
-				src = val;
-			}
-			cout << src;
+	if (regex_match(input, s, outp)) {
+		string val = s[2];
+		if (regex_match(val, m, reg)) {
+			src = R[stoi(m[1])];
 		}
-		else if (s[1] == "Input") {
-			string r = s[2];
-			if (regex_match(r, m, reg)) {
-				string tmp;
-				cin >> tmp;
-				if (regex_match(tmp, boolean) || regex_match(tmp, integer) || regex_match(tmp, flOat)) {
-					src = tmp;
-				}
-				else throw TypeMismatch(i);
-				R[stoi(m[1])] = src;
+		else {
+			src = val;
+		}
+		cout << src;
+	}
+	else if (regex_match(input, s, inp)) {
+		string r = s[2];
+		if (regex_match(r, m, reg)) {
+			string tmp;
+			cin >> tmp;
+			if (regex_match(tmp, boolean) || regex_match(tmp, integer) || regex_match(tmp, flOat)) {
+				dest = tmp;
 			}
+			else throw TypeMismatch(i);
+			R[stoi(m[1])] = dest;
 		}
 	}
 }
