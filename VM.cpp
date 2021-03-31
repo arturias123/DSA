@@ -389,6 +389,9 @@ void VM::inOut(string input) {
 		if (regex_match(val, m, reg)) {
 			src = R[stoi(m[1])];
 		}
+		else if (regex_match(val, m, address)) {
+			src = staticMem[stoi(m[1])];
+		}
 		else {
 			src = val;
 		}
@@ -396,14 +399,12 @@ void VM::inOut(string input) {
 	}
 	else if (regex_match(input, s, inp)) {
 		string r = s[2];
-		if (regex_match(r, m, reg)) {
-			string tmp;
-			cin >> tmp;
-			if (regex_match(tmp, boolean) || regex_match(tmp, integer) || regex_match(tmp, flOat)) {
-				dest = tmp;
-			}
-			else throw TypeMismatch(i);
-			R[stoi(m[1])] = dest;
+		string tmp;
+		cin >> tmp;
+		if (regex_match(tmp, boolean) || regex_match(tmp, integer) || regex_match(tmp, flOat)) {
+			dest = tmp;
 		}
+		else throw TypeMismatch(i);
+		R[stoi(r)] = dest;
 	}
 }
